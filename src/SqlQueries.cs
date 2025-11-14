@@ -40,27 +40,39 @@ internal sealed class SqlQueries
 
     private const string SetCacheItemFormat =
         """
-        MERGE INTO {0} x
-        USING (SELECT :Id                                                                           AS "ID",
-                      :Value                                                                        AS "VALUE",
-                      CASE
-                          WHEN :SlidingExpirationInSeconds IS NULL THEN :AbsoluteExpiration
-                          ELSE :UtcNow + NUMTODSINTERVAL(:SlidingExpirationInSeconds, 'SECOND') END AS "EXPIRESATTIME",
-                      :SlidingExpirationInSeconds                                                   AS "SLIDINGEXPIRATIONINSECONDS",
-                      :AbsoluteExpiration                                                           AS "ABSOLUTEEXPIRATION"
-               FROM DUAL) y
-        ON (x."ID" = y."ID")
-        WHEN MATCHED THEN
-            UPDATE
-            SET x."VALUE"                      = y."VALUE",
-                x."EXPIRESATTIME"              = y."EXPIRESATTIME",
-                x."SLIDINGEXPIRATIONINSECONDS" = y."SLIDINGEXPIRATIONINSECONDS",
-                x."ABSOLUTEEXPIRATION"         = y."ABSOLUTEEXPIRATION"
-            WHERE x."ID" = y."ID"
-        WHEN NOT MATCHED THEN
-            INSERT (x."ID", x."VALUE", x."EXPIRESATTIME", x."SLIDINGEXPIRATIONINSECONDS", x."ABSOLUTEEXPIRATION")
-            VALUES (y."ID", y."VALUE", y."EXPIRESATTIME", y."SLIDINGEXPIRATIONINSECONDS", y."ABSOLUTEEXPIRATION")
+        BEGIN
+            UPDATE {0}
+               SET "VALUE"                      = :Value,
+                   "EXPIRESATTIME"              = CASE
+                                                    WHEN :SlidingExpirationInSeconds IS NULL THEN :AbsoluteExpiration
+                                                    ELSE :UtcNow + NUMTODSINTERVAL(:SlidingExpirationInSeconds, 'SECOND')
+                                                  END,
+                   "SLIDINGEXPIRATIONINSECONDS" = :SlidingExpirationInSeconds,
+                   "ABSOLUTEEXPIRATION"         = :AbsoluteExpiration
+             WHERE "ID" = :Id;
+
+            IF SQL%ROWCOUNT = 0 THEN
+                INSERT INTO {0} (
+                    "ID",
+                    "VALUE",
+                    "EXPIRESATTIME",
+                    "SLIDINGEXPIRATIONINSECONDS",
+                    "ABSOLUTEEXPIRATION"
+                )
+                VALUES (
+                    :Id,
+                    :Value,
+                    CASE
+                        WHEN :SlidingExpirationInSeconds IS NULL THEN :AbsoluteExpiration
+                        ELSE :UtcNow + NUMTODSINTERVAL(:SlidingExpirationInSeconds, 'SECOND')
+                    END,
+                    :SlidingExpirationInSeconds,
+                    :AbsoluteExpiration
+                );
+            END IF;
+        END;
         """;
+
 
     private const string DeleteCacheItemFormat =
         """
