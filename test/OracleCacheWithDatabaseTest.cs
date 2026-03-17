@@ -1,13 +1,10 @@
 ﻿using System.Data;
 using System.Globalization;
-
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Internal;
-
 using Oracle.ManagedDataAccess.Client;
 
-// ReSharper disable once CheckNamespace
 namespace Microsoft.Extensions.Caching.Oracle;
 
 public class OracleCacheWithDatabaseTest
@@ -49,7 +46,7 @@ public class OracleCacheWithDatabaseTest
         var cache = GetOracleCache();
 
         // Act
-        var value = await cache.GetAsync("NonExisting");
+        var value = await cache.GetAsync("NonExisting", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Null(value);
@@ -68,7 +65,8 @@ public class OracleCacheWithDatabaseTest
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => cache.SetAsync(
             key,
             expectedValue,
-            new DistributedCacheEntryOptions().SetAbsoluteExpiration(testClock.UtcNow.AddHours(-1))));
+            new DistributedCacheEntryOptions().SetAbsoluteExpiration(testClock.UtcNow.AddHours(-1)),
+            TestContext.Current.CancellationToken));
         Assert.Equal("The absolute expiration value must be in the future.", exception.Message);
     }
 
@@ -85,14 +83,15 @@ public class OracleCacheWithDatabaseTest
         // Act
         await cache.SetAsync(
             key, expectedValue,
-            new DistributedCacheEntryOptions().SetSlidingExpiration(TimeSpan.FromMinutes(30)));
+            new DistributedCacheEntryOptions().SetSlidingExpiration(TimeSpan.FromMinutes(30)),
+            TestContext.Current.CancellationToken);
 
         // Assert
         var cacheItem = await GetCacheItemFromDatabaseAsync(key);
         Assert.Equal(expectedValue, cacheItem!.Value);
 
         // Act
-        await cache.RemoveAsync(key);
+        await cache.RemoveAsync(key, TestContext.Current.CancellationToken);
 
         // Assert
         var cacheItemInfo = await GetCacheItemFromDatabaseAsync(key);
@@ -115,7 +114,8 @@ public class OracleCacheWithDatabaseTest
             new DistributedCacheEntryOptions
             {
                 AbsoluteExpiration = null, AbsoluteExpirationRelativeToNow = null, SlidingExpiration = null
-            });
+            },
+            TestContext.Current.CancellationToken);
 
         // Assert
         await AssertGetCacheItemFromDatabaseAsync(
@@ -130,7 +130,7 @@ public class OracleCacheWithDatabaseTest
         Assert.Equal(expectedValue, cacheItem!.Value);
 
         // Act
-        await cache.RemoveAsync(key);
+        await cache.RemoveAsync(key, TestContext.Current.CancellationToken);
 
         // Assert
         var cacheItemInfo = await GetCacheItemFromDatabaseAsync(key);
@@ -154,7 +154,8 @@ public class OracleCacheWithDatabaseTest
             new DistributedCacheEntryOptions
             {
                 AbsoluteExpiration = null, AbsoluteExpirationRelativeToNow = null, SlidingExpiration = null
-            });
+            },
+            TestContext.Current.CancellationToken);
 
         // Assert
         await AssertGetCacheItemFromDatabaseAsync(
@@ -169,7 +170,7 @@ public class OracleCacheWithDatabaseTest
         Assert.Equal(expectedValue, cacheItem!.Value);
 
         // Act
-        await cache.RemoveAsync(key);
+        await cache.RemoveAsync(key, TestContext.Current.CancellationToken);
 
         // Assert
         var cacheItemInfo = await GetCacheItemFromDatabaseAsync(key);
@@ -189,7 +190,8 @@ public class OracleCacheWithDatabaseTest
         // Act
         await cache.SetAsync(
             key, expectedValue,
-            new DistributedCacheEntryOptions().SetSlidingExpiration(TimeSpan.FromMinutes(30)));
+            new DistributedCacheEntryOptions().SetSlidingExpiration(TimeSpan.FromMinutes(30)),
+            TestContext.Current.CancellationToken);
 
         // Assert
         var cacheItem = await GetCacheItemFromDatabaseAsync(key);
@@ -210,13 +212,14 @@ public class OracleCacheWithDatabaseTest
         await cache.SetAsync(
             key,
             "Hello, World!"u8.ToArray(),
-            new DistributedCacheEntryOptions().SetSlidingExpiration(TimeSpan.FromSeconds(slidingExpirationWindow)));
+            new DistributedCacheEntryOptions().SetSlidingExpiration(TimeSpan.FromSeconds(slidingExpirationWindow)),
+            TestContext.Current.CancellationToken);
 
         // set the clock's UtcNow far in future
         testClock.Add(TimeSpan.FromHours(accessItemAt));
 
         // Act
-        var value = await cache.GetAsync(key);
+        var value = await cache.GetAsync(key, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Null(value);
@@ -237,7 +240,8 @@ public class OracleCacheWithDatabaseTest
         await cache.SetAsync(
             key,
             expectedValue,
-            new DistributedCacheEntryOptions().SetSlidingExpiration(slidingExpirationWindow));
+            new DistributedCacheEntryOptions().SetSlidingExpiration(slidingExpirationWindow),
+            TestContext.Current.CancellationToken);
 
         testClock.Add(TimeSpan.FromSeconds(accessItemAt));
         // Act
@@ -270,11 +274,12 @@ public class OracleCacheWithDatabaseTest
             // Set both sliding and absolute expiration
             new DistributedCacheEntryOptions()
                 .SetSlidingExpiration(slidingExpiration)
-                .SetAbsoluteExpiration(absoluteExpiration));
+                .SetAbsoluteExpiration(absoluteExpiration),
+            TestContext.Current.CancellationToken);
 
         // Act
         _ = testClock.Add(TimeSpan.FromSeconds(accessItemAt)).UtcNow;
-        var value = await cache.GetAsync(key);
+        var value = await cache.GetAsync(key, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Null(value);
@@ -290,13 +295,14 @@ public class OracleCacheWithDatabaseTest
         await cache.SetAsync(
             key,
             "Hello, World!"u8.ToArray(),
-            new DistributedCacheEntryOptions().SetAbsoluteExpiration(TimeSpan.FromSeconds(10)));
+            new DistributedCacheEntryOptions().SetAbsoluteExpiration(TimeSpan.FromSeconds(10)),
+            TestContext.Current.CancellationToken);
 
         // set the clock's UtcNow far in future
         testClock.Add(TimeSpan.FromHours(10));
 
         // Act
-        var value = await cache.GetAsync(key);
+        var value = await cache.GetAsync(key, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Null(value);
@@ -313,13 +319,14 @@ public class OracleCacheWithDatabaseTest
             key,
             "Hello, World!"u8.ToArray(),
             new DistributedCacheEntryOptions()
-                .SetAbsoluteExpiration(testClock.UtcNow.Add(TimeSpan.FromSeconds(30))));
+                .SetAbsoluteExpiration(testClock.UtcNow.Add(TimeSpan.FromSeconds(30))),
+            TestContext.Current.CancellationToken);
 
         // set the clock's UtcNow far in future
         testClock.Add(TimeSpan.FromHours(10));
 
         // Act
-        var value = await cache.GetAsync(key);
+        var value = await cache.GetAsync(key, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Null(value);
@@ -341,7 +348,8 @@ public class OracleCacheWithDatabaseTest
             key,
             expectedValue,
             new DistributedCacheEntryOptions()
-                .SetAbsoluteExpiration(absoluteExpirationRelativeToUtcNow));
+                .SetAbsoluteExpiration(absoluteExpirationRelativeToUtcNow),
+            TestContext.Current.CancellationToken);
 
         // Assert
         await AssertGetCacheItemFromDatabaseAsync(
@@ -368,7 +376,8 @@ public class OracleCacheWithDatabaseTest
             key,
             expectedValue,
             new DistributedCacheEntryOptions()
-                .SetAbsoluteExpiration(expectedAbsoluteExpiration));
+                .SetAbsoluteExpiration(expectedAbsoluteExpiration),
+            TestContext.Current.CancellationToken);
 
         // Assert
         await AssertGetCacheItemFromDatabaseAsync(
@@ -395,7 +404,8 @@ public class OracleCacheWithDatabaseTest
         await cache.SetAsync(
             key,
             expectedValue,
-            new DistributedCacheEntryOptions().SetAbsoluteExpiration(absoluteExpiration));
+            new DistributedCacheEntryOptions().SetAbsoluteExpiration(absoluteExpiration),
+            TestContext.Current.CancellationToken);
         await AssertGetCacheItemFromDatabaseAsync(
             cache,
             key,
@@ -409,7 +419,8 @@ public class OracleCacheWithDatabaseTest
         await cache.SetAsync(
             key,
             expectedValue,
-            new DistributedCacheEntryOptions().SetAbsoluteExpiration(absoluteExpiration));
+            new DistributedCacheEntryOptions().SetAbsoluteExpiration(absoluteExpiration),
+            TestContext.Current.CancellationToken);
         await AssertGetCacheItemFromDatabaseAsync(
             cache,
             key,
@@ -434,7 +445,8 @@ public class OracleCacheWithDatabaseTest
         await cache.SetAsync(
             key,
             expectedValue,
-            new DistributedCacheEntryOptions().SetAbsoluteExpiration(absoluteExpiration));
+            new DistributedCacheEntryOptions().SetAbsoluteExpiration(absoluteExpiration),
+            TestContext.Current.CancellationToken);
 
         // Assert
         await AssertGetCacheItemFromDatabaseAsync(
@@ -460,11 +472,12 @@ public class OracleCacheWithDatabaseTest
         await cache.SetAsync(
             key,
             expectedValue,
-            new DistributedCacheEntryOptions().SetSlidingExpiration(slidingExpiration));
+            new DistributedCacheEntryOptions().SetSlidingExpiration(slidingExpiration),
+            TestContext.Current.CancellationToken);
 
         // Act
         testClock.Add(TimeSpan.FromSeconds(5));
-        await cache.RefreshAsync(key);
+        await cache.RefreshAsync(key, TestContext.Current.CancellationToken);
 
         // Assert
         // verify if the expiration time in database is set as expected
@@ -492,7 +505,8 @@ public class OracleCacheWithDatabaseTest
             // Set both sliding and absolute expiration
             new DistributedCacheEntryOptions()
                 .SetSlidingExpiration(slidingExpiration)
-                .SetAbsoluteExpiration(absoluteExpiration));
+                .SetAbsoluteExpiration(absoluteExpiration),
+            TestContext.Current.CancellationToken);
 
         // Act && Assert
         var cacheItemInfo = await GetCacheItemFromDatabaseAsync(key);
@@ -544,11 +558,12 @@ public class OracleCacheWithDatabaseTest
         await cache.SetAsync(
             key,
             expectedValue,
-            new DistributedCacheEntryOptions().SetAbsoluteExpiration(absoluteExpirationRelativeToNow));
+            new DistributedCacheEntryOptions().SetAbsoluteExpiration(absoluteExpirationRelativeToNow),
+            TestContext.Current.CancellationToken);
         testClock.Add(TimeSpan.FromSeconds(25));
 
         // Act
-        var value = await cache.GetAsync(key);
+        var value = await cache.GetAsync(key, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(value);
@@ -574,11 +589,12 @@ public class OracleCacheWithDatabaseTest
         await cache.SetAsync(
             key,
             expectedValue,
-            new DistributedCacheEntryOptions().SetSlidingExpiration(slidingExpiration));
+            new DistributedCacheEntryOptions().SetSlidingExpiration(slidingExpiration),
+            TestContext.Current.CancellationToken);
 
         // Act
         testClock.Add(TimeSpan.FromSeconds(5));
-        await cache.RefreshAsync(key);
+        await cache.RefreshAsync(key, TestContext.Current.CancellationToken);
 
         // Assert
         // verify if the expiration time in database is set as expected
@@ -598,10 +614,11 @@ public class OracleCacheWithDatabaseTest
         await cache.SetAsync(
             key,
             "Hello, World!"u8.ToArray(),
-            new DistributedCacheEntryOptions().SetAbsoluteExpiration(TimeSpan.FromHours(1)));
+            new DistributedCacheEntryOptions().SetAbsoluteExpiration(TimeSpan.FromHours(1)),
+            TestContext.Current.CancellationToken);
 
         // Act
-        var value = await cache.GetAsync(key.ToUpper(CultureInfo.InvariantCulture)); // key made upper case
+        var value = await cache.GetAsync(key.ToUpper(CultureInfo.InvariantCulture), TestContext.Current.CancellationToken); // key made upper case
 
         // Assert
         Assert.Null(value);
@@ -617,10 +634,11 @@ public class OracleCacheWithDatabaseTest
         await cache.SetAsync(
             key,
             expectedValue,
-            new DistributedCacheEntryOptions().SetAbsoluteExpiration(TimeSpan.FromHours(1)));
+            new DistributedCacheEntryOptions().SetAbsoluteExpiration(TimeSpan.FromHours(1)),
+            TestContext.Current.CancellationToken);
 
         // Act
-        var value = await cache.GetAsync(key);
+        var value = await cache.GetAsync(key, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(value);
@@ -636,10 +654,11 @@ public class OracleCacheWithDatabaseTest
         await cache.SetAsync(
             key,
             "Hello, World!"u8.ToArray(),
-            new DistributedCacheEntryOptions().SetSlidingExpiration(TimeSpan.FromSeconds(10)));
+            new DistributedCacheEntryOptions().SetSlidingExpiration(TimeSpan.FromSeconds(10)),
+            TestContext.Current.CancellationToken);
 
         // Act
-        await cache.RemoveAsync(key);
+        await cache.RemoveAsync(key, TestContext.Current.CancellationToken);
 
         // Assert
         var cacheItemInfo = await GetCacheItemFromDatabaseAsync(key);
@@ -673,7 +692,7 @@ public class OracleCacheWithDatabaseTest
         DateTimeOffset? absoluteExpiration,
         DateTimeOffset expectedExpirationTime)
     {
-        var value = await cache.GetAsync(key);
+        var value = await cache.GetAsync(key, TestContext.Current.CancellationToken);
         Assert.NotNull(value);
         Assert.Equal(expectedValue, value);
         var cacheItemInfo = await GetCacheItemFromDatabaseAsync(key);
