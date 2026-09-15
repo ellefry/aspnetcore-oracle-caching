@@ -28,6 +28,7 @@
 
 	<PropertyGroup>
 		<PackageLicenseFile>LICENSE</PackageLicenseFile>
+		<PackageIcon>oracle_cache.png</PackageIcon>
 	</PropertyGroup>
 
     <ItemGroup>
@@ -46,6 +47,13 @@
         <PackageReference Include="Microsoft.Extensions.Caching.Abstractions" />
         <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
         <PackageReference Include="Microsoft.Extensions.Options" />
-        <PackageReference Include="Oracle.ManagedDataAccess.Core"/>
+        <PackageReference Include="Oracle.ManagedDataAccess.Core" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Update="oracle_cache.png">
+        <Pack>True</Pack>
+        <PackagePath>\</PackagePath>
+      </None>
     </ItemGroup>
 </Project>
